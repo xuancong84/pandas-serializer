@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 
-import os, sys, io, re, pandas, gzip, types
+import os, sys, io, re, pandas, numpy, gzip, types
 
 
 def Open(fn, mode='r', **kwargs):
@@ -57,25 +57,32 @@ def pandas_decode(obj, sep=pandas_sep):
 	try:
 		obj1 = obj[1:]
 		if obj1.startswith("<") and obj1.endswith('>'):
-			rem = re.fullmatch("<([^ ]+) ([^ ]+).*>", obj1)
+			if 'built-in' in obj1:
+				aa=5
+			rem = re.fullmatch("< *([^ ]+) +([^ ]+).*>", obj1.replace('built-in', ''))
 			obj_type, obj_name = rem.groups()
-			obj1 = eval(obj_name[1:-1] if re.match("'.*'", obj_name) else obj_name)
-			obj = obj1 if str(obj1).startswith('<'+obj_type+' ') else obj
+			obj2 = eval(obj_name[1:-1] if re.match("'.*'", obj_name) else obj_name)
+			obj = obj2 if str(obj1).startswith(obj1.split()[0]) else obj
 		else:
 			dct = eval(obj1)
-			if dct['type'] in ['DataFrame', 'Series']:
+			if dct['type'] == 'DataFrame':
 				df = pandas.read_csv(io.StringIO(dct['csv']))
 				df.columns = dct['csv'].splitlines()[0].split(sep)
-				index_col = df.columns[:-1] if dct['type'] == 'Series' else [(df.columns[0] if c == None else c) for c in dct['index']]
+				index_col = [(df.columns[0] if c == None else c) for c in dct['index']]
 				obj = df.set_index(index_col)
+			elif dct['type'] == 'Series':
+				df = pandas.read_csv(io.StringIO(dct['csv']))
+				df.columns = dct['csv'].splitlines()[0].split(sep)
+				df = df.set_index(list(df.columns[:-1]))
+				obj = df.iloc[:, 0]
 	except:
 		pass
 	return obj
 
 
 # load object from string
-def pandas_loads(repr, sep=pandas_sep):
-	return pandas_decode(eval(repr, {'nan':float('nan')}), sep=sep)
+def pandas_loads(s, sep=pandas_sep):
+	return pandas_decode(eval(s, {'nan':float('nan'), 'array':numpy.array, 'matrix':numpy.matrix}), sep=sep)
 
 
 # load object from file/filename
@@ -84,7 +91,7 @@ def pandas_load(fp, sep=pandas_sep):
 
 
 # encode pandas objects into strings
-_convertible_set = {int, float, complex, bool, str, bytes, type(None)}
+_convertible_set = {int, float, complex, bool, str, bytes, type(None), numpy.ndarray, numpy.matrix}
 def pandas_encode(obj, sep=pandas_sep):
 	if type(obj) in _convertible_set:
 		return obj
@@ -119,11 +126,16 @@ def pandas_save(obj, fp, sep=pandas_sep):
 if __name__ == '__main__':
 	import pandas as pd
 	import numpy as np
+	from pandas import concat
 	df = pd.DataFrame(np.random.randint(0,256,[4,4]), columns=['index a1', 'index a2', 'b', 'c'],
 					   index=pd.date_range('2020-01-01', '2020-01-04')).set_index(['index a1', 'index a2'], append=True)
-	df0 = [1, 3.4, 1.1+2.1j, np.nan, None, True, False, b'ab12', 'abc', int, pd.DataFrame(), pd.DataFrame, type(pd.DataFrame), ['a', 1],
-		   {'a':1, 'b':2, type:0, int:1, 0:df}, {1, 3.4, 1+2j, np.nan, True, None, int, 'aa', os, sys, pd.concat}]
+	sr = pd.Series([1, 2.5, 3+1j, np.nan, 'abc'], index=pd.date_range('2020-01-01', '2020-01-05', tz='Asia/Singapore'))
+	df0 = [1, 3.4, 1.1+2.1j, np.nan, None, True, False, b'ab12', 'abc', int, float,
+		   pd.Series(), pd.DataFrame(), pd.DataFrame, type(pd.DataFrame), ['a', 1],
+		   {'a':1, 'b':2, type:0, int:1, print:max, pd:np, 0:df, 1:sr, 2:np.array([[1,2.5,'a'],[1+.5j,np.nan,'b']]), 3:np.matrix([[1,2.5],[1+.5j,np.nan]])},
+		   {1, 3.4, 1+2j, np.nan, True, False, None, int, 'aa', os, sys, pd.concat}]
 	txt = pandas_saves(df0)
+	print(txt, file=sys.stderr)
 	df1 = pandas_loads(txt)
 
 	assert True
