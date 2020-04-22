@@ -21,6 +21,7 @@ As shown in the built-in example, this utility can successfully serialize and de
 ```python
 [1, 3.4, 1.1+2.1j, np.nan, None, True, False, b'ab12', 'abc', int, float,
  pd.Series(), pd.DataFrame(), pd.DataFrame, type(pd.DataFrame), ['a', 1],
+ lambda a,b,*args,x=0.5,y=-0.1: a**2+b+sum([*args])+x*y+1,
  {
   'a':1,
   'b':2,
@@ -38,4 +39,4 @@ As shown in the built-in example, this utility can successfully serialize and de
  {1, 3.4, 1+2j, np.nan, True, False, None, int, 'aa', os, sys, pd.concat}]
 ```
 
-It should be noted that in order to successfully deserialize functions, they have to be imported at root namespace; and for modules, they have to be imported in the first place. Otherwise, the resulting objects will be in the specially-coded string form which is nevertheless readable.
+It should be noted that serialization of lambda is supported at code level, but functions are only serialized at surface name level. Therefore, in order to successfully deserialize functions, they have to be imported or defined first; and similarly for modules, they have to be imported in the first place. Otherwise, the resulting objects will be in the specially-coded string form which is nevertheless readable.
