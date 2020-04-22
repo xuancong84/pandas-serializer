@@ -1,6 +1,6 @@
 # pandas-serializer
 A utility for text-based serialization and deserialization (i.e., save/load) of Python nested container objects (such as list, dict and set), containing Pandas DataFrame/Series and NumPy arrays/matrices, etc.
-DataFrame/Series conformance behaviour is the same as pandas.DataFrame.to_csv() and pandas.read_csv() .
+De-serialized DataFrame and Series object will try to conform to the original object type. However, since the conversion is based on to_csv() and read_csv(), data types indistinguishable by pandas.DataFrame.to_csv() will remain indistinguishable, e.g., None vs NaN, etc.
 
 **Exported functions**:
 - pandas_save(obj, fp_fn) : save object into the file/filename
@@ -32,7 +32,7 @@ As shown in the built-in example, this utility can successfully serialize and de
   0:pd.DataFrame(np.random.randint(0,256,[4,4]),
                  columns=['index a1', 'index a2', 'b', 'c'],
                  index=pd.date_range('2020-01-01', '2020-01-04')).set_index(['index a1', 'index a2'], append=True),
-  1:pd.Series([1, 2.5, 3+1j, np.nan, 'abc'], index=pd.date_range('2020-01-01', '2020-01-05', tz='Asia/Singapore')),
+  1:pd.Series([1, 2.5, 3+1j, np.nan, 'abc', True, None, float], index=pd.date_range('2020-01-01', '2020-01-08', tz='Asia/Singapore')),
   2:np.array([[1, 2.5, 'a'], [1+.5j, np.nan, 'b']]),
   3:np.matrix([[1, 2.5], [1+.5j, np.nan]])
  },
@@ -40,3 +40,5 @@ As shown in the built-in example, this utility can successfully serialize and de
 ```
 
 It should be noted that serialization of lambda is supported at code level, but functions are only serialized at surface name level. Therefore, in order to successfully deserialize functions, they have to be imported or defined first; and similarly for modules, they have to be imported in the first place. Otherwise, the resulting objects will be in the specially-coded string form which is nevertheless readable.
+
+This utility is designed for semi-human-readablility, thus, it is less efficient than PyArrow on speed. For serialization of huge tables and big data, we recommend using PyArrow for binary serialization.
